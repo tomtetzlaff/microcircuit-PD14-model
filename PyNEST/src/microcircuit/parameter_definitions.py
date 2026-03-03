@@ -34,12 +34,13 @@ class Parameters(BaseModel):
         json_schema_extra={"unit": "", "latex": r"$\alpha_K$", "section": r"network"},
     )
 
+    ## TODO: This is not a parameter. Remove it here.
     populations: list = Field(
         default=["L23E", "L23I", "L4E", "L4I", "L5E", "L5I", "L6E", "L6I"],
         description="List of population names.",
         json_schema_extra={
             "unit": "",
-            "latex": r"$\mathcal{P}=\Bigcup_x x$",
+            "latex": r"$\mathcal{P}=\bigcup_x x$",
             "section": r"network",
         },
     )
@@ -94,7 +95,7 @@ class Parameters(BaseModel):
         description="Resting potential.",
         json_schema_extra={
             "unit": "mV",
-            "latex": r"$E_\text{L}$",  ## TODO: use V_\text{rest}
+            "latex": r"$E_\text{L}$",  ## TODO: use V_\text{rest} in model description
             "section": r"neuron",
         },
     )
@@ -104,7 +105,7 @@ class Parameters(BaseModel):
         description="Spike threshold potential.",
         json_schema_extra={
             "unit": "mV",
-            "latex": r"$\theta$",  ## TODO: use V_\text{th}
+            "latex": r"$\theta$",  ## TODO: use V_\text{th} in model description
             "section": r"neuron",
         },
     )
@@ -336,11 +337,252 @@ class Parameters(BaseModel):
         },
     )
 
-    ## TODO: remaining stimululs parameters
+    thalamic_input: bool = Field(
+        default=False,
+        description="Turn (transient) thalamic input on ('True) or off ('False'; default).",
+        json_schema_extra={
+            "unit": "",
+            "latex": r"thalamic\_input",
+            "section": r"stimulus",
+        },
+    )
+
+    th_start: float = Field(
+        default=700.0,
+        description="Onset time of thalamic input.",
+        json_schema_extra={
+            "unit": "ms",
+            "latex": r"$t_\text{start}$",
+            "section": r"stimulus",
+        },
+    )
+
+    th_duration: float = Field(
+        default=10.0,
+        description="Duration of thalamic input.",
+        json_schema_extra={
+            "unit": "ms",
+            "latex": r"$\Delta_\mathcal{T}$",
+            "section": r"stimulus",
+        },
+    )
+
+    th_rate: float = Field(
+        default=120.0,
+        description="Rate of thalamic input.",
+        json_schema_extra={
+            "unit": "spikes/s",
+            "latex": r"$\nu_\mathcal{T}$",
+            "section": r"stimulus",
+        },
+    )
+
+    num_th_neurons: int = Field(
+        default=902,
+        description="Number of thalamic neurons.",
+        json_schema_extra={
+            "unit": "",
+            "latex": r"$N_\mathcal{T}$",
+            "section": r"stimulus",
+        },
+    )
+
+    conn_probs_th: list = Field(
+        default=[0.0, 0.0, 0.0983, 0.0619, 0.0, 0.0, 0.0512, 0.0196],
+        description="Probabilities of connections from the thalamus to the different populations (same order as in `populations` in `net_dict`).",
+        json_schema_extra={
+            "unit": "",
+            "latex": r"$C_{\mathcal{T}x}$ ($\forall x\in\mathcal{P}$)",
+            "section": r"stimulus",
+        },
+    )
+
+    ## TODO: in the model description, this is not a separate parameter, but identical to $J$; check model code
+    PSP_th: float = Field(
+        default=0.15,
+        description="Mean weight of thalamic inputs (PSP amplitude).",
+        json_schema_extra={
+            "unit": "mV",
+            "latex": r"$J_\mathcal{T}$",
+            "section": r"stimulus",
+        },
+    )
+
+    ## TODO: in the model description, this is not a separate parameter, but identical to $d_E$; check model code
+    delay_th_mean: float = Field(
+        default=1.5,
+        description="Mean spike transmission delay of thalamic inputs.",
+        json_schema_extra={
+            "unit": "ms",
+            "latex": r"$\bar{d}_\mathcal{T}$",
+            "section": r"stimulus",
+        },
+    )
+
+    ## TODO: in the model description, this is not a separate parameter, but identical to $CV_d$; check model code
+    delay_th_rel_std: float = Field(
+        default=0.5,
+        description="Coefficient of variation of thalamic delay distribution (ratio between standard deviation and mean of thalamic delay distribution).",
+        json_schema_extra={
+            "unit": "",
+            "latex": r"$\text{CV}_{d,\mathcal{T}}$",
+            "section": r"stimulus",
+        },
+    )
+
+    dc_input: bool = Field(
+        default=False,
+        description="Turn (transient) DC input on ('True) or off ('False'; default).",
+        json_schema_extra={
+            "unit": "",
+            "latex": r"dc\_input",
+            "section": r"stimulus",
+        },
+    )
+
+    dc_transient_start: float = Field(
+        default=650.0,
+        description="Onset time of transient DC input.",
+        json_schema_extra={
+            "unit": "ms",
+            "latex": r"$t_\text{start}^\text{DC}$",
+            "section": r"stimulus",
+        },
+    )
+
+    dc_transient_dur: float = Field(
+        default=100.0,
+        description="Duration of transient DC input.",
+        json_schema_extra={
+            "unit": "ms",
+            "latex": r"$\Delta_\text{DC}$",
+            "section": r"stimulus",
+        },
+    )
+
+    dc_transient_amp: float = Field(
+        default=0.3,
+        description="Amplitude of transient DC input (final amplitude is population-specific and will be obtained by multiplication with 'K_ext').",
+        json_schema_extra={
+            "unit": "pA",
+            "latex": r"$I_\text{DC}$",
+            "section": r"stimulus",
+        },
+    )
 
     #########################################################################
     ## simulation parameters
-    ## TODO
+
+    t_presim: float = Field(
+        default=500.0,
+        description="Duration of presimulation (warmup).",
+        json_schema_extra={
+            "unit": "ms",
+            "latex": r"t\_presim$",
+            "section": r"simulation",
+        },
+    )
+
+    t_sim: float = Field(
+        default=1000.0,
+        description="Duration of (main) simulation.",
+        json_schema_extra={
+            "unit": "ms",
+            "latex": r"t\_sim$",
+            "section": r"simulation",
+        },
+    )
+
+    sim_resolution: float = Field(
+        default=0.1,
+        description="Simulation time resolution.",
+        json_schema_extra={
+            "unit": "ms",
+            "latex": r"sim\_resolution$",
+            "section": r"simulation",
+        },
+    )
+
+    rec_dev: list = Field(
+        default=["spike_recorder"],
+        description="List of recording devices ('spike_recorder' [default] and/or 'voltmeter'). Nothing will be recorded if an empty list is given.",
+        json_schema_extra={
+            "unit": "",
+            "latex": r"rec\_dev",
+            "section": r"simulation",
+        },
+    )
+
+    ## TODO: make sure that the current working directory is appended when setting derived parameters; "data_path": os.path.join(os.getcwd(), "data/")
+    data_path: str = Field(
+        default="data/",
+        description="Path for storage of simulation data and metadata.",
+        json_schema_extra={
+            "unit": "",
+            "latex": r"data\_path",
+            "section": r"simulation",
+        },
+    )
+
+    rng_seed: int = Field(
+        default=55,
+        description="Seed for NEST random number generator (used for connectivity, initial conditions, and Poissonian spike input).",
+        json_schema_extra={
+            "unit": "",
+            "latex": r"rng\_seed",
+            "section": r"simulation",
+        },
+    )
+
+    local_num_threads: int = Field(
+        default=4,
+        description="Number of threads per MPI process. Note: when up-scaling the network, the model may not run correctly if there are < 4 virtual processes (i.e, a thread in an MPI process). If there are 4 or more MPI processes, this value can be set to 1.",
+        json_schema_extra={
+            "unit": "",
+            "latex": r"local\_num\_threads",
+            "section": r"simulation",
+        },
+    )
+
+    rec_V_int: float = Field(
+        default=1.0,
+        description="Time resolution of membrane potential recordings.",
+        json_schema_extra={
+            "unit": "ms",
+            "latex": r"rec\_V\_int",
+            "section": r"simulation",
+        },
+    )
+
+    overwrite_files: bool = Field(
+        default=True,
+        description="If 'True' (default), existing files will be overwritten. If 'False', a NESTError is raised if the files already exist.",
+        json_schema_extra={
+            "unit": "",
+            "latex": r"overwrite\_files",
+            "section": r"simulation",
+        },
+    )
+
+    print_time: bool = Field(
+        default=True,
+        description="If 'True' (default), the simulation progress is printed. This should only be used if the simulation is run on a local machine.",
+        json_schema_extra={
+            "unit": "",
+            "latex": r"print\_time",
+            "section": r"simulation",
+        },
+    )
+
+    store_meta_data: bool = Field(
+        default=True,
+        description="If 'True' (default), metadata (parameter values, node IDs, and software requirements) will be stored together with the simulation data. ",
+        json_schema_extra={
+            "unit": "",
+            "latex": r"store\_meta\_data",
+            "section": r"simulation",
+        },
+    )
 
     #########################################################################
     ### computed fields for derived parameters
