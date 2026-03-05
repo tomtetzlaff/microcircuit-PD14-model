@@ -21,10 +21,11 @@
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-'''
+"""
 PyNEST implementation of the cortical microcircuit model of Potjans & Diesmann (2014).
-'''
+"""
 
-__version__ = '0.1.0-dev.5'
+__version__ = "0.1.0-dev.5"
 
-from microcircuit.network import Network
+# from microcircuit.network import Network
+from microcircuit.model import Model

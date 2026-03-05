@@ -47,6 +47,8 @@ import numpy as np
 from pydantic import BaseModel, Field, computed_field
 import rich
 
+import microcircuit.helpers as helpers
+
 ####################################
 
 
@@ -93,7 +95,7 @@ class Parameters(BaseModel):
         description="Default number of neurons in each population.",
         json_schema_extra={
             "unit": "",
-            "latex": r"$\tilde{N}_x$ ($\forall x\in\mathcal{P}$)",
+            "latex": r"$\tilde{N}_{x,\text{full}}$ ($\forall x\in\mathcal{P}$)",
             "section": r"network",
         },
     )
@@ -348,13 +350,13 @@ class Parameters(BaseModel):
         },
     )
 
-    ## TODO: rename variable into `K_cc`
+    ## TODO: rename variable into `K_cc_full`
     K_ext: list = Field(
         default=[1600, 1500, 2100, 1900, 2000, 1900, 2900, 2100],
-        description="Number of cortico-cortical inputs per neuron (in-degree) for the different populations (same order as in `populations`).",
+        description="Number of cortico-cortical inputs per neuron (in-degree) in the full-scalenework for the different populations (same order as in `populations`).",
         json_schema_extra={
             "unit": "",
-            "latex": r"$K_{\mathcal{C}_x}$ ($\forall x\in\mathcal{P}$)",
+            "latex": r"$K_{\mathcal{C}_x,\text{full}}$ ($\forall x\in\mathcal{P}$)",
             "section": r"stimulus",
         },
     )
@@ -644,14 +646,185 @@ class Parameters(BaseModel):
         description="Number of neurons in each population.",
         json_schema_extra={
             "unit": "",
-            "latex": r"$N_i=\alpha_N \tilde{N}_i$ ($\forall i\in\mathcal{P}$)",
+            "latex": r"$N_x=\alpha_N N_{x,\text{full}}$ ($\forall x\in\mathcal{P}$)",
             "section": r"network_derived",
         },
     )
     @property
     def num_neurons(self) -> list:
-        # return (self.N_scaling * np.array(self.full_num_neurons)).astype(int).tolist()
         return (self.N_scaling * np.array(self.full_num_neurons)).astype(int)
+
+    @computed_field(
+        description="Number of populations.",
+        json_schema_extra={
+            "unit": "",
+            "latex": r"$N_\text{pops}$",
+            "section": r"network_derived",
+        },
+    )
+    @property
+    def num_pops(self) -> int:
+        return len(self.populations)
+
+    @computed_field(
+        description="Total number of connections between neuronal populations in the full-scale network, for each pair of presynaptic and postsynaptic populations.",
+        json_schema_extra={
+            "unit": "",
+            "latex": r"$Q_{yx}^\text{full}$ ($\forall y,x\in\mathcal{P}$)",
+            "section": r"network_derived",
+        },
+    )
+    @property
+    def full_num_synapses(self) -> list:
+        return helpers.num_synapses_from_conn_probs(
+            self.conn_probs, self.full_num_neurons, self.full_num_neurons
+        )
+
+    @computed_field(
+        description="Total number of synapses between neuronal populations, for each pair of presynaptic and postsynaptic populations.",
+        json_schema_extra={
+            "unit": "",
+            "latex": r"$Q_{yx}$ ($\forall y,x\in\mathcal{P}$)",
+            "section": r"network_derived",
+        },
+    )
+    @property
+    def num_synapses(self) -> list:
+        return np.round(
+            np.array(self.full_num_synapses) * self.N_scaling * self.K_scaling
+        ).astype(int)
+
+    ## TODO: rename variable into `K_cc`
+    @computed_field(
+        description="Number of cortico-cortical inputs per neuron (in-degree) for the different populations.",
+        json_schema_extra={
+            "unit": "",
+            "latex": r"$K_{\mathcal{C}_x}$ ($\forall x\in\mathcal{P}$)",
+            "section": r"network_derived",
+        },
+    )
+    @property
+    def ext_indegrees(self) -> list:
+        return np.round(np.array(self.K_ext) * self.K_scaling).astype(int)
+
+    @computed_field(
+        description="Unit PSP amplitude (ratio between PSP and PSC amplitude; conversion factor for synaptic weights).",
+        json_schema_extra={
+            "unit": "mV/pA",
+            "latex": r"$J_\text{unit}$",
+            "section": r"synapse_derived",
+        },
+    )
+    @property
+    def J_unit(self) -> float:
+        return 1 / helpers.postsynaptic_potential_to_current(
+            self.C_m, self.tau_m, self.tau_syn
+        )
+
+    @computed_field(
+        description="Matrix of mean PSC amplitudes for all pairs of presynaptic and postsynaptic populations.",
+        json_schema_extra={
+            "unit": "pA",
+            "latex": r"$\bar{I}_{yx}$ ($\forall y,x\in\mathcal{P}$)",
+            "section": r"synapse_derived",
+        },
+    )
+    @property
+    def PSC_matrix_mean(self) -> list:
+        return self.PSP_matrix_mean / self.J_unit
+
+    @computed_field(
+        description="Mean PSC amplitude of cortico-cortical inputs.",
+        json_schema_extra={
+            "unit": "pA",
+            "latex": r"$\bar{I}_\mathcal{C}$",
+            "section": r"synapse_derived",
+        },
+    )
+    @property
+    def PSC_ext(self) -> float:
+        return self.PSP_exc_mean / self.J_unit
+
+    # PSC_ext = self.net_dict["PSP_exc_mean"] * PSC_over_PSP
+
+    # # DC input compensates for potentially missing Poisson input
+    # if self.net_dict["bg_input_type"] == "poisson":
+    #     DC_amp = np.zeros(self.num_pops)
+    # # else:
+    # elif self.net_dict["bg_input_type"] == "dc":
+    #     # if nest.Rank() == 0: # default case should not raise a warning
+    #     # warnings.warn("DC input created to compensate missing Poisson input.\n")
+    #     DC_amp = helpers.dc_input_compensating_poisson(
+    #         self.net_dict["bg_rate"],
+    #         self.net_dict["K_ext"],
+    #         self.net_dict["neuron_params"]["tau_syn"],
+    #         PSC_ext,
+    #     )
+
+    # # adjust weights and DC amplitude if the indegree is scaled
+    # if self.net_dict["K_scaling"] != 1:
+    #     PSC_matrix_mean, PSC_ext, DC_amp = (
+    #         helpers.adjust_weights_and_input_to_synapse_scaling(
+    #             self.net_dict["full_num_neurons"],
+    #             full_num_synapses,
+    #             self.net_dict["K_scaling"],
+    #             PSC_matrix_mean,
+    #             PSC_ext,
+    #             self.net_dict["neuron_params"]["tau_syn"],
+    #             self.net_dict["full_mean_rates"],
+    #             DC_amp,
+    #             self.net_dict["bg_input_type"],
+    #             self.net_dict["bg_rate"],
+    #             self.net_dict["K_ext"],
+    #         )
+    #     )
+
+    #     # check if all populations are supra-threshold with the changed DC input
+    #     if self.net_dict["bg_input_type"] == "dc":
+    #         I_rh = helpers.compute_rheo_base_current(
+    #             self.net_dict["neuron_params"]["V_th"],
+    #             self.net_dict["neuron_params"]["E_L"],
+    #             self.net_dict["neuron_params"]["C_m"],
+    #             self.net_dict["neuron_params"]["tau_m"],
+    #         )
+    #         for i, pop in enumerate(self.net_dict["populations"]):
+    #             if DC_amp[i] < I_rh:
+    #                 warnings.warn(
+    #                     "\nPopulation {} is sub-threshold with downscaled DC input amplitude and may not fire. ".format(
+    #                         pop
+    #                     )
+    #                 )
+
+    # # store final parameters as class attributes
+    # self.weight_matrix_mean = PSC_matrix_mean
+    # self.weight_ext = PSC_ext
+    # self.DC_amp = DC_amp
+
+    # # thalamic input
+    # if self.stim_dict["thalamic_input"]:
+    #     num_th_synapses = helpers.num_synapses_from_conn_probs(
+    #         self.stim_dict["conn_probs_th"],
+    #         self.stim_dict["num_th_neurons"],
+    #         self.net_dict["full_num_neurons"],
+    #     )[0]
+    #     self.weight_th = self.stim_dict["PSP_th"] * PSC_over_PSP
+    #     if self.net_dict["K_scaling"] != 1:
+    #         num_th_synapses *= self.net_dict["K_scaling"]
+    #         self.weight_th /= np.sqrt(self.net_dict["K_scaling"])
+    #     self.num_th_synapses = np.round(num_th_synapses).astype(int)
+
+    # if nest.Rank() == 0:
+    #     message = ""
+    #     if self.net_dict["N_scaling"] != 1:
+    #         message += "Neuron numbers are scaled by a factor of {:.3f}.\n".format(
+    #             self.net_dict["N_scaling"]
+    #         )
+    #     if self.net_dict["K_scaling"] != 1:
+    #         message += "Indegrees are scaled by a factor of {:.3f}.".format(
+    #             self.net_dict["K_scaling"]
+    #         )
+    #         message += "\n  Weights and DC input are adjusted to compensate.\n"
+    #     print(message)
 
     ###################################
     ## derived neuron parameters
@@ -681,7 +854,7 @@ class Parameters(BaseModel):
     )
     @property
     def PSP_matrix_mean(self) -> list:
-        return get_exc_inh_matrix(
+        return helpers.get_exc_inh_matrix(
             self.PSP_exc_mean, self.PSP_exc_mean * self.g, len(self.populations)
         )
 
@@ -695,7 +868,7 @@ class Parameters(BaseModel):
     )
     @property
     def delay_matrix_mean(self) -> list:
-        return get_exc_inh_matrix(
+        return helpers.get_exc_inh_matrix(
             self.delay_exc_mean, self.delay_inh_mean, len(self.populations)
         )
 
@@ -721,43 +894,10 @@ class Parameters(BaseModel):
         # rich.print(self.model_dump_json(indent=4))
 
 
+################################################################################
+
+
 #########################################################################
-def get_exc_inh_matrix(val_exc, val_inh, num_pops) -> list:
-    """
-    Creates a matrix of size `num_pops` x `num_pops`, where columns with even
-    indices (0, 2, 4, ...) are filled with `val_exc`, and columns with odd
-    indices (1, 3, 5, ...) are filled with `val_inh`. This is used to create
-    matrices of synaptic weights or delays for all pairs of presynaptic and
-    postsynaptic populations, based on the assumption that populations with
-    even indices in the `populations` list are excitatory and populations with
-    odd indices are inhibitory.
-
-    Parameters:
-    -----------
-    val_exc: float
-             Excitatory value.
-
-    val_inh: float
-             Inhibitory value.
-
-    num_pops: int
-              Number of populations.
-
-    Returns:
-    ---------
-
-    matrix: np.ndarray(float)
-            Matrix of of size (num_pops x num_pops).
-
-    """
-
-    matrix = np.zeros((num_pops, num_pops))
-    matrix[:, 0:num_pops:2] = val_exc
-    matrix[:, 1:num_pops:2] = val_inh
-
-    return matrix
-
-
 def generate_example_config(filename="params_default.yaml", mode="validation") -> None:
     """
     Generates a YAML configuration file containing all parameters defined in
@@ -875,7 +1015,9 @@ def test_parameter_loading(filename) -> None:
 
 #########################################################################
 
-if __name__ == "__main__":
+
+# if __name__ == "__main__":
+def illustrate_parameter_usage():
 
     filename = "params_default.yaml"
 
@@ -897,12 +1039,21 @@ if __name__ == "__main__":
     print()
 
     P = Parameters()  ## create instance of Parameters class with default values
+
     print("default:")
-    print("delay_exc_mean=", P.delay_exc_mean)
-    print("delay_matrix_mean=", P.delay_matrix_mean)
+    print("\tfull_num_neurons=", P.full_num_neurons)
+    print("\tnum_neurons=", P.num_neurons)
     print()
 
-    P.delay_exc_mean = 2.0  ## change value of primary parameter
-    print("revised:")
-    print("delay_exc_mean=", P.delay_exc_mean)
-    print("delay_matrix_mean=", P.delay_matrix_mean)
+    scaling_factor = 0.2
+    P.N_scaling = scaling_factor
+    P.K_scaling = scaling_factor
+
+    print("after scaling with factor %.1f:" % scaling_factor)
+    print("\tnum_neurons=", P.num_neurons)
+
+
+#########################################################################
+
+if __name__ == "__main__":
+    illustrate_parameter_usage()
