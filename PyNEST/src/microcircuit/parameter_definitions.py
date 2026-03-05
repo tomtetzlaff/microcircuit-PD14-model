@@ -1,15 +1,48 @@
-## TODOs
-##  - add "section" to json_schema_extra
-##  -separate model and simulation parameters
-##  -function for saving parameters to yaml
-#    with open("outfile.yaml", "w") as outfile:
-#       yaml.dump(params.model_dump(), outfile)
-#    ## see also parameters of model_dump()
+# -*- coding: utf-8 -*-
+#
+# parameter_definitions.py
+#
+# This file is part of NEST.
+#
+# Copyright (C) 2004 The NEST Initiative
+#
+# NEST is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 2 of the License, or
+# (at your option) any later version.
+#
+# NEST is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with NEST.  If not, see <http://www.gnu.org/licenses/>.
+#
+# SPDX-License-Identifier: GPL-2.0-or-later
+
+"""
+This file contains the definition of all microcircuit-PD14 parameters,
+including (default) values, physical units, descriptions, latex notations, and
+sections for a classification of parameters.
+
+The parameter definition is an instance of the Pydantic BaseModel class, which
+allows for validation of parameters and generation of a JSON schema. The JSON
+schema can be used for an automated generation of a YAML configuration file
+(see `generate_example_config()`). This YAML file can serve as a template for
+user-defined configuration files, which can be loaded into the model and
+validated against the JSON schema (see `load_parameters_from_yaml()`).
+
+Secondary parameters are derived from the primary parameters by defining
+"computed_fields". When loading user-defined parameters from a YAML
+file, the computed fields are automatically updated.
+
+"""
 
 ####################################
 
 from ruamel.yaml import YAML
-import numpy
+import numpy as np
 
 from pydantic import BaseModel, Field, computed_field
 import rich
@@ -20,6 +53,16 @@ import rich
 class Parameters(BaseModel):
 
     #########################################################################
+    ## primary parameters
+
+    """
+    All parameters that are defined in the model description and that can be
+    directly set by the user are defined here as primary parameters. This includes
+    network parameters, neuron parameters, synapse parameters, initialization
+    parameters, stimulus parameters, and simulation parameters.
+    """
+
+    ###################################
     ## network parameters
 
     N_scaling: float = Field(
@@ -74,8 +117,9 @@ class Parameters(BaseModel):
         },
     )
 
-    #########################################################################
+    ###################################
     ## neuron parameters
+
     neuron_model: str = Field(
         default="iaf_psc_exp",
         description="NEST neuron model name.",
@@ -151,7 +195,7 @@ class Parameters(BaseModel):
         },
     )
 
-    #########################################################################
+    ###################################
     ## synapse parameters
 
     ## TODO: rename variable into `weight_exc_mean`
@@ -227,7 +271,7 @@ class Parameters(BaseModel):
         },
     )
 
-    #########################################################################
+    ###################################
     ## initialization parameters
 
     V0_type: str = Field(
@@ -281,7 +325,7 @@ class Parameters(BaseModel):
         },
     )
 
-    #########################################################################
+    ###################################
     ## stimulus parameters
     full_mean_rates: list = Field(
         default=[0.903, 2.965, 4.414, 5.876, 7.569, 8.633, 1.105, 7.829],
@@ -470,7 +514,7 @@ class Parameters(BaseModel):
         },
     )
 
-    #########################################################################
+    ###################################
     ## simulation parameters
 
     t_presim: float = Field(
@@ -585,33 +629,163 @@ class Parameters(BaseModel):
     )
 
     #########################################################################
-    ### computed fields for derived parameters
+    ## secondary parameters
+    """
+    All parameters that are not directly set by the user, but derived from the
+    primary parameters are defined here as secondary parameters. When loading
+    user-defined parameters from a YAML file, the computed fields are
+    automatically updated.
+    """
+
+    ###################################
+    ## derived network parameters
+
     @computed_field(
         description="Number of neurons in each population.",
         json_schema_extra={
             "unit": "",
             "latex": r"$N_i=\alpha_N \tilde{N}_i$ ($\forall i\in\mathcal{P}$)",
-            "section": r"network",
+            "section": r"network_derived",
         },
     )
     @property
     def num_neurons(self) -> list:
-        return (self.N_scaling * numpy.array(self.full_num_neurons)).astype(int)
+        # return (self.N_scaling * np.array(self.full_num_neurons)).astype(int).tolist()
+        return (self.N_scaling * np.array(self.full_num_neurons)).astype(int)
 
-    ## TODO: R_m
-    ## TODO: PSP_matrix_mean
-    ## TODO: delay_matrix_mean
-    ## TODO: t_stop
+    ###################################
+    ## derived neuron parameters
+
+    @computed_field(
+        description="Membrane resistance.",
+        json_schema_extra={
+            "unit": r"M$\Omega$",
+            "latex": r"$R_\text{m}=\tau_\text{m}/C_\text{m}$",
+            "section": r"neuron_derived",
+        },
+    )
+    @property
+    def R_m(self) -> float:
+        return self.tau_m / self.C_m * 1000.0  # conversion from ms/pF to MOhm
+
+    ###################################
+    ## derived synapse parameters
+
+    @computed_field(
+        description="Matrix containing mean synaptic weights (PSP amplitudes) all pairs of presynaptic and postsynaptic populations.",
+        json_schema_extra={
+            "unit": "mV",
+            "latex": r"$J_{yx}$ ($\forall y,x\in\mathcal{P}$)",
+            "section": r"synapse_derived",
+        },
+    )
+    @property
+    def PSP_matrix_mean(self) -> list:
+        return get_exc_inh_matrix(
+            self.PSP_exc_mean, self.PSP_exc_mean * self.g, len(self.populations)
+        )
+
+    @computed_field(
+        description="Matrix containing mean spike transmission delays all pairs of presynaptic and postsynaptic populations.",
+        json_schema_extra={
+            "unit": "ms",
+            "latex": r"$d_{yx}$ ($\forall y,x\in\mathcal{P}$)",
+            "section": r"synapse_derived",
+        },
+    )
+    @property
+    def delay_matrix_mean(self) -> list:
+        return get_exc_inh_matrix(
+            self.delay_exc_mean, self.delay_inh_mean, len(self.populations)
+        )
+
     ## TODO: synaptic weights $\bar{I})yx$ (PSC amplitude) for different pairs $x$ and $y$
+
+    ## TODO: delay_matrix_mean
+
+    ###################################
+    ## derived stimulus parameters
+
     ## TODO: mean total current of cc inputs $I_{C_x}$
     ## TODO: mean current of each individual cc input
+    ## TODO: t_stop
 
+    #########################################################################
     # def model_post_init(self):
     #     assert self.J>0
 
+    #########################################################################
+    def print(self) -> None:
+        rich.print(self)
+        # rich.print(dict(self))
+        # rich.print(self.model_dump_json(indent=4))
 
-####################################
+
+#########################################################################
+def get_exc_inh_matrix(val_exc, val_inh, num_pops) -> list:
+    """
+    Creates a matrix of size `num_pops` x `num_pops`, where columns with even
+    indices (0, 2, 4, ...) are filled with `val_exc`, and columns with odd
+    indices (1, 3, 5, ...) are filled with `val_inh`. This is used to create
+    matrices of synaptic weights or delays for all pairs of presynaptic and
+    postsynaptic populations, based on the assumption that populations with
+    even indices in the `populations` list are excitatory and populations with
+    odd indices are inhibitory.
+
+    Parameters:
+    -----------
+    val_exc: float
+             Excitatory value.
+
+    val_inh: float
+             Inhibitory value.
+
+    num_pops: int
+              Number of populations.
+
+    Returns:
+    ---------
+
+    matrix: np.ndarray(float)
+            Matrix of of size (num_pops x num_pops).
+
+    """
+
+    matrix = np.zeros((num_pops, num_pops))
+    matrix[:, 0:num_pops:2] = val_exc
+    matrix[:, 1:num_pops:2] = val_inh
+
+    return matrix
+
+
 def generate_example_config(filename="params_default.yaml", mode="validation") -> None:
+    """
+    Generates a YAML configuration file containing all parameters defined in
+    the Parameters class. All metadata (descriptions, units, LaTeX symbols, and
+    sections) are included in the YAML file as comments. The parameters are
+    listed in the order they are defined in the Parameters class.
+
+    The generated YAML file can be used as a template for user-defined
+    configuration files.
+
+    Parameters:
+    -----------
+
+    filename: str
+        Path to the YAML file to be generated.
+
+    mode: str
+
+          Mode for JSON schema generation.
+
+          'validation' (default): only primary parameters are included.
+
+          'serialization': both primary and secondary parameters are included;
+                           secondary parameters are included without values, as
+                           they will be automatically updated
+
+    """
+
     schema = Parameters.model_json_schema(mode=mode)
 
     with open(filename, "w") as yaml_file:
@@ -640,19 +814,53 @@ def generate_example_config(filename="params_default.yaml", mode="validation") -
             yaml_file.write("\n")
 
 
-####################################
+#########################################################################
+
 ## move to io.py
 yaml = YAML()
 
 
 def load_parameters_from_yaml(filename) -> Parameters:
+    """
+    Loads parameters from a YAML file and validates them against the Parameters
+    class.
+
+    Parameters:
+    -----------
+
+    filename: str
+        Path to the YAML file containing the parameters.
+
+    Returns:
+    --------
+
+    Parameters
+        An instance of the Parameters class containing the loaded parameters.
+
+    """
+
     with open(filename, "r") as yaml_file:
         loaded_params = yaml.load(yaml_file)
         return Parameters.model_validate(loaded_params)
 
 
-def test_parameter_loading(filename):
+#########################################################################
 
+
+def test_parameter_loading(filename) -> None:
+    """
+    Test function for loading parameters from a YAML file. It loads parameters
+    from a YAML file, and checks if they match the original parameters defined
+    in the Parameters class.
+
+    Parameters:
+    -----------
+
+    filename: str
+              Path to the YAML file containing the parameters to be loaded and
+              tested.
+
+    """
     params = Parameters()
 
     # filename = "params_default.yaml"
@@ -665,14 +873,36 @@ def test_parameter_loading(filename):
     ), "Validation failed: Loaded parameters do not match the original defaults."
 
 
-####################################
+#########################################################################
 
 if __name__ == "__main__":
+
     filename = "params_default.yaml"
-    generate_example_config(filename, mode="validation")
 
-    test_parameter_loading(filename)
-    print("All tests passed.")
+    ## to include primary parameters only (without derived parameters)
+    # generate_example_config(filename, mode="validation")
+
+    ## to include both primary and secondary parameters
+    ## (secondary parameters without values)
+    generate_example_config(filename, mode="serialization")
+
+    # test_parameter_loading(filename)
+    # print("All tests passed.")
+
+    ## load parameters from YAML file and print them
     P = load_parameters_from_yaml(filename)
+    P.print()
 
-    rich.print(P)
+    ## illustrate usage
+    print()
+
+    P = Parameters()  ## create instance of Parameters class with default values
+    print("default:")
+    print("delay_exc_mean=", P.delay_exc_mean)
+    print("delay_matrix_mean=", P.delay_matrix_mean)
+    print()
+
+    P.delay_exc_mean = 2.0  ## change value of primary parameter
+    print("revised:")
+    print("delay_exc_mean=", P.delay_exc_mean)
+    print("delay_matrix_mean=", P.delay_matrix_mean)
