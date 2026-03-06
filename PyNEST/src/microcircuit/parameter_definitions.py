@@ -43,15 +43,15 @@ file, the computed fields are automatically updated.
 
 from ruamel.yaml import YAML
 import numpy as np
+from typing import Self
 
 from pydantic import BaseModel, Field, computed_field
 import rich
 
 import microcircuit.helpers as helpers
 
-####################################
 
-
+################################################################################
 class Parameters(BaseModel):
 
     #########################################################################
@@ -69,33 +69,33 @@ class Parameters(BaseModel):
 
     N_scaling: float = Field(
         default=1.0,
-        description="Scaling factor determining network size.",
+        description=r"Scaling factor determining network size.",
         json_schema_extra={"unit": "", "latex": r"$\alpha_N$", "section": r"network"},
     )
 
     K_scaling: float = Field(
         default=1.0,
-        description="Scaling factor determining synapse numbers.",
+        description=r"Scaling factor determining synapse numbers.",
         json_schema_extra={"unit": "", "latex": r"$\alpha_K$", "section": r"network"},
     )
 
     ## TODO: This is not a parameter. Remove it here.
     populations: list = Field(
         default=["L23E", "L23I", "L4E", "L4I", "L5E", "L5I", "L6E", "L6I"],
-        description="List of population names.",
+        description=r"Populations.",
         json_schema_extra={
             "unit": "",
-            "latex": r"$\mathcal{P}=\bigcup_x x$",
+            "latex": r"$x$",
             "section": r"network",
         },
     )
 
     full_num_neurons: list = Field(
         default=[20683, 5834, 21915, 5479, 4850, 1065, 14395, 2948],
-        description="Default number of neurons in each population.",
+        description=r"Default number of neurons in each population $x$ of the full-scale network.",
         json_schema_extra={
             "unit": "",
-            "latex": r"$\tilde{N}_{x,\text{full}}$ ($\forall x\in\mathcal{P}$)",
+            "latex": r"$\tilde{N}_x$",
             "section": r"network",
         },
     )
@@ -111,10 +111,10 @@ class Parameters(BaseModel):
             [0.0156, 0.0066, 0.0211, 0.0166, 0.0572, 0.0197, 0.0396, 0.2252],
             [0.0364, 0.001, 0.0034, 0.0005, 0.0277, 0.008, 0.0658, 0.1443],
         ],
-        description="Connection probabilities (first index: target; second index: source)",
+        description=r"Connection probabilities for each pair of pre- and postsynaptic populations $x$ and $y$ (first index: target; second index: source)",
         json_schema_extra={
             "unit": "",
-            "latex": r"$C_{yx}$ ($\forall y,x\in\mathcal{P}$)",
+            "latex": r"$C_{yx}$",
             "section": r"network",
         },
     )
@@ -124,7 +124,7 @@ class Parameters(BaseModel):
 
     neuron_model: str = Field(
         default="iaf_psc_exp",
-        description="NEST neuron model name.",
+        description=r"NEST neuron model name.",
         json_schema_extra={
             "unit": "",
             "latex": r"neuron\_model",
@@ -138,27 +138,27 @@ class Parameters(BaseModel):
     ## TODO: rename variable into `V_rest`
     E_L: float = Field(
         default=-65.0,
-        description="Resting potential.",
+        description=r"Resting potential.",
         json_schema_extra={
             "unit": "mV",
-            "latex": r"$E_\text{L}$",  ## TODO: use V_\text{rest} in model description
+            "latex": r"V_\text{rest}",
             "section": r"neuron",
         },
     )
 
     V_th: float = Field(
         default=-50.0,
-        description="Spike threshold potential.",
+        description=r"Spike threshold potential.",
         json_schema_extra={
             "unit": "mV",
-            "latex": r"$\theta$",  ## TODO: use V_\text{th} in model description
+            "latex": r"$\theta$",
             "section": r"neuron",
         },
     )
 
     V_reset: float = Field(
         default=-65.0,
-        description="After-spike reset potential.",
+        description=r"After-spike reset potential.",
         json_schema_extra={
             "unit": "mV",
             "latex": r"$V_\text{reset}$",
@@ -168,7 +168,7 @@ class Parameters(BaseModel):
 
     C_m: float = Field(
         default=250.0,
-        description="Membrane capacitance.",
+        description=r"Membrane capacitance.",
         json_schema_extra={
             "unit": "pF",
             "latex": r"$C_\text{m}$",
@@ -178,7 +178,7 @@ class Parameters(BaseModel):
 
     tau_m: float = Field(
         default=10.0,
-        description="Membrane time constant.",
+        description=r"Membrane time constant.",
         json_schema_extra={
             "unit": "ms",
             "latex": r"$\tau_\text{m}$",
@@ -189,7 +189,7 @@ class Parameters(BaseModel):
     ## TODO: rename variable into `tau_ref`
     t_ref: float = Field(
         default=2.0,
-        description="Duration of absolute refractory period.",
+        description=r"Duration of absolute refractory period.",
         json_schema_extra={
             "unit": "ms",
             "latex": r"$\tau_\text{ref}$",
@@ -203,7 +203,7 @@ class Parameters(BaseModel):
     ## TODO: rename variable into `weight_exc_mean`
     PSP_exc_mean: float = Field(
         default=0.15,
-        description="Mean weight of excitatory synapses (PSP amplitude).",
+        description=r"Mean weight of excitatory synapses (PSP amplitude).",
         json_schema_extra={
             "unit": "mV",
             "latex": r"$J$",
@@ -214,7 +214,7 @@ class Parameters(BaseModel):
     ## TODO: rename variable into `weight_cv`
     weight_rel_std: float = Field(
         default=0.1,
-        description="Coefficient of variation of synaptic weight distributions (ratio between standard deviation and mean).",
+        description=r"Coefficient of variation of synaptic weight distributions (ratio between standard deviation and mean).",
         json_schema_extra={
             "unit": "",
             "latex": r"$\text{CV}_\text{w}$",
@@ -224,7 +224,7 @@ class Parameters(BaseModel):
 
     g: float = Field(
         default=-4.0,
-        description="Relative weight of inhibitory synapses (ratio of inhibitory and excitatory synaptic weights).",
+        description=r"Relative weight of inhibitory synapses (ratio of inhibitory and excitatory synaptic weights).",
         json_schema_extra={
             "unit": "",
             "latex": r"$g$",
@@ -234,7 +234,7 @@ class Parameters(BaseModel):
 
     tau_syn: float = Field(
         default=0.5,
-        description="Time constant of postsynaptic currents.",
+        description=r"Time constant of postsynaptic currents.",
         json_schema_extra={
             "unit": "ms",
             "latex": r"$\tau_\text{s}$",
@@ -244,7 +244,7 @@ class Parameters(BaseModel):
 
     delay_exc_mean: float = Field(
         default=1.5,
-        description="Mean spike transmission delay of excitatory connections.",
+        description=r"Mean spike transmission delay of excitatory connections.",
         json_schema_extra={
             "unit": "ms",
             "latex": r"$\bar{d}_\text{E}$",
@@ -254,7 +254,7 @@ class Parameters(BaseModel):
 
     delay_inh_mean: float = Field(
         default=0.75,
-        description="Mean spike transmission delay of inhibitory connections.",
+        description=r"Mean spike transmission delay of inhibitory connections.",
         json_schema_extra={
             "unit": "ms",
             "latex": r"$\bar{d}_\text{I}$",
@@ -265,7 +265,7 @@ class Parameters(BaseModel):
     ## TODO: rename variable into `delay_cv`
     delay_rel_std: float = Field(
         default=0.5,
-        description="Coefficient of variation of delay distributions (ratio between standard deviation and mean).",
+        description=r"Coefficient of variation of delay distributions (ratio between standard deviation and mean).",
         json_schema_extra={
             "unit": "",
             "latex": r"$\text{CV}_\text{d}$",
@@ -289,7 +289,7 @@ class Parameters(BaseModel):
     ## TODO: adjust model code to the new parameterization used here
     V0_mean_original: float = Field(
         default=-58.0,
-        description="Mean of initial membrane potentials in case V0_type = 'original'.",
+        description=r"Mean of initial membrane potentials in case V0_type = 'original'.",
         json_schema_extra={
             "unit": "mV",
             "latex": r"$V0\_mean\_original$",
@@ -299,7 +299,7 @@ class Parameters(BaseModel):
 
     V0_std_original: float = Field(
         default=10.0,
-        description="Standard deviation of initial membrane potentials in case V0_type = 'original'.",
+        description=r"Standard deviation of initial membrane potentials in case V0_type = 'original'.",
         json_schema_extra={
             "unit": "mV",
             "latex": r"$V0\_std\_original$",
@@ -309,7 +309,7 @@ class Parameters(BaseModel):
 
     V0_mean_optimized: list = Field(
         default=[-68.28, -63.16, -63.33, -63.45, -63.11, -61.66, -66.72, -61.43],
-        description="Population-specific mean of initial membrane potentials in case V0_type = 'optimized' (same order as in `populations`).",
+        description=r"Population-specific mean of initial membrane potentials in case V0_type = 'optimized' (same order as in `populations`).",
         json_schema_extra={
             "unit": "mV",
             "latex": r"$V0\_mean\_optimized$",
@@ -319,7 +319,7 @@ class Parameters(BaseModel):
 
     V0_std_optimized: list = Field(
         default=[5.36, 4.57, 4.74, 4.94, 4.94, 4.55, 5.46, 4.48],
-        description="Population-specific standard deviation of initial membrane potentials in case V0_type = 'optimized' (same order as in `populations`).",
+        description=r"Population-specific standard deviation of initial membrane potentials in case V0_type = 'optimized' (same order as in `populations`).",
         json_schema_extra={
             "unit": "mV",
             "latex": r"$V0\_std\_optimized$",
@@ -331,18 +331,18 @@ class Parameters(BaseModel):
     ## stimulus parameters
     full_mean_rates: list = Field(
         default=[0.903, 2.965, 4.414, 5.876, 7.569, 8.633, 1.105, 7.829],
-        description="Mean firing rates of the different populations in the non-scaled version of the microcircuit (same order as in `populations`; required for network scaling).",
+        description=r"Mean firing rates of the different populations $x$ in the non-scaled version of the microcircuit (same order as in `populations`; required for network scaling).",
         json_schema_extra={
             "unit": "spikes/s",
-            "latex": r"$\nu_x$ ($\forall x\in\mathcal{P}$)",
+            "latex": r"$\tilde{\nu}_x$",
             "section": r"stimulus",
         },
     )
 
-    ## TODO: rename variable into `cc_type`
+    ## TODO: rename variable into `CC_type`
     bg_input_type: str = Field(
         default="dc",
-        description="Type of cortico-cortical input ('poisson' or 'dc').",
+        description=r"Type of cortico-cortical input ('poisson' or 'dc').",
         json_schema_extra={
             "unit": "",
             "latex": r"bg\_input\_type",
@@ -350,42 +350,42 @@ class Parameters(BaseModel):
         },
     )
 
-    ## TODO: rename variable into `K_cc_full`
+    ## TODO: rename variable into `K_CC_full`
     K_ext: list = Field(
         default=[1600, 1500, 2100, 1900, 2000, 1900, 2900, 2100],
-        description="Number of cortico-cortical inputs per neuron (in-degree) in the full-scalenework for the different populations (same order as in `populations`).",
+        description=r"Number of cortico-cortical inputs per neuron (in-degree) in the full-scalenework for each cortical population $y$ (same order as in `populations`).",
         json_schema_extra={
             "unit": "",
-            "latex": r"$K_{\mathcal{C}_x,\text{full}}$ ($\forall x\in\mathcal{P}$)",
+            "latex": r"$\tilde{K}_{\mathcal{C}_y}$",
             "section": r"stimulus",
         },
     )
 
-    ## TODO: rename variable into `rate_cc`
+    ## TODO: rename variable into `rate_CC`
     bg_rate: float = Field(
         default=8.0,
-        description="Rate of cortico-cortical inputs.",
+        description=r"Rate of cortico-cortical inputs.",
         json_schema_extra={
             "unit": "spikes/s",
-            "latex": r"$\nu_\mathcal{C}$",
+            "latex": r"$\nu_\text{CC}$",
             "section": r"stimulus",
         },
     )
 
-    ## TODO: rename variable into `delay_cc`
+    ## TODO: rename variable into `delay_CC`
     delay_poisson: float = Field(
         default=1.5,
-        description="Spike transmission delay of cortico-cortical inputs.",
+        description=r"Spike transmission delay of cortico-cortical inputs.",
         json_schema_extra={
             "unit": "ms",
-            "latex": r"$\bar{d}_{yx}$ ($\forall y\in\mathcal{P},\ x=\mathcal{C}_y$)",
+            "latex": r"$\bar{d}_\text{CC}$",
             "section": r"stimulus",
         },
     )
 
     thalamic_input: bool = Field(
         default=False,
-        description="Turn (transient) thalamic input on ('True) or off ('False'; default).",
+        description=r"Turn (transient) thalamic input on ('True) or off ('False'; default).",
         json_schema_extra={
             "unit": "",
             "latex": r"thalamic\_input",
@@ -395,7 +395,7 @@ class Parameters(BaseModel):
 
     th_start: float = Field(
         default=700.0,
-        description="Onset time of thalamic input.",
+        description=r"Onset time of thalamic input.",
         json_schema_extra={
             "unit": "ms",
             "latex": r"$t_\text{start}$",
@@ -405,40 +405,40 @@ class Parameters(BaseModel):
 
     th_duration: float = Field(
         default=10.0,
-        description="Duration of thalamic input.",
+        description=r"Duration of thalamo-cortical input.",
         json_schema_extra={
             "unit": "ms",
-            "latex": r"$\Delta_\mathcal{T}$",
+            "latex": r"$\Delta_\text{TC}$",
             "section": r"stimulus",
         },
     )
 
     th_rate: float = Field(
         default=120.0,
-        description="Rate of thalamic input.",
+        description=r"Rate of thalamo-cortical input.",
         json_schema_extra={
             "unit": "spikes/s",
-            "latex": r"$\nu_\mathcal{T}$",
+            "latex": r"$\nu_\text{TC}$",
             "section": r"stimulus",
         },
     )
 
     num_th_neurons: int = Field(
         default=902,
-        description="Number of thalamic neurons.",
+        description=r"Number of thalamic neurons.",
         json_schema_extra={
             "unit": "",
-            "latex": r"$N_\mathcal{T}$",
+            "latex": r"$N_\text{TC}$",
             "section": r"stimulus",
         },
     )
 
     conn_probs_th: list = Field(
         default=[0.0, 0.0, 0.0983, 0.0619, 0.0, 0.0, 0.0512, 0.0196],
-        description="Probabilities of connections from the thalamus to the different populations (same order as in `populations` in `net_dict`).",
+        description=r"Probabilities of connections from the thalamus to each cortical populations $y$ (same order as in `populations`).",
         json_schema_extra={
             "unit": "",
-            "latex": r"$C_{\mathcal{T}x}$ ($\forall x\in\mathcal{P}$)",
+            "latex": r"$C_{y,\mathcal{T}}$",
             "section": r"stimulus",
         },
     )
@@ -446,10 +446,10 @@ class Parameters(BaseModel):
     ## TODO: in the model description, this is not a separate parameter, but identical to $J$; check model code
     PSP_th: float = Field(
         default=0.15,
-        description="Mean weight of thalamic inputs (PSP amplitude).",
+        description=r"Mean weight of thalamo-cortical inputs (PSP amplitude).",
         json_schema_extra={
             "unit": "mV",
-            "latex": r"$J_\mathcal{T}$",
+            "latex": r"$J_\text{TC}$",
             "section": r"stimulus",
         },
     )
@@ -457,10 +457,10 @@ class Parameters(BaseModel):
     ## TODO: in the model description, this is not a separate parameter, but identical to $d_E$; check model code
     delay_th_mean: float = Field(
         default=1.5,
-        description="Mean spike transmission delay of thalamic inputs.",
+        description=r"Mean spike transmission delay of thalamo-cortical inputs.",
         json_schema_extra={
             "unit": "ms",
-            "latex": r"$\bar{d}_\mathcal{T}$",
+            "latex": r"$\bar{d}_\text{TC}$",
             "section": r"stimulus",
         },
     )
@@ -468,17 +468,17 @@ class Parameters(BaseModel):
     ## TODO: in the model description, this is not a separate parameter, but identical to $CV_d$; check model code
     delay_th_rel_std: float = Field(
         default=0.5,
-        description="Coefficient of variation of thalamic delay distribution (ratio between standard deviation and mean of thalamic delay distribution).",
+        description=r"Coefficient of variation of thalamo-cortical spike transmission delays (ratio between standard deviation and mean of thalamic delay distribution).",
         json_schema_extra={
             "unit": "",
-            "latex": r"$\text{CV}_{d,\mathcal{T}}$",
+            "latex": r"$\text{CV}_\text{d,TC}$",
             "section": r"stimulus",
         },
     )
 
     dc_input: bool = Field(
         default=False,
-        description="Turn (transient) DC input on ('True) or off ('False'; default).",
+        description=r"Turn (transient) DC input on ('True) or off ('False'; default).",
         json_schema_extra={
             "unit": "",
             "latex": r"dc\_input",
@@ -488,7 +488,7 @@ class Parameters(BaseModel):
 
     dc_transient_start: float = Field(
         default=650.0,
-        description="Onset time of transient DC input.",
+        description=r"Onset time of transient DC input.",
         json_schema_extra={
             "unit": "ms",
             "latex": r"$t_\text{start}^\text{DC}$",
@@ -498,7 +498,7 @@ class Parameters(BaseModel):
 
     dc_transient_dur: float = Field(
         default=100.0,
-        description="Duration of transient DC input.",
+        description=r"Duration of transient DC input.",
         json_schema_extra={
             "unit": "ms",
             "latex": r"$\Delta_\text{DC}$",
@@ -508,7 +508,7 @@ class Parameters(BaseModel):
 
     dc_transient_amp: float = Field(
         default=0.3,
-        description="Amplitude of transient DC input (final amplitude is population-specific and will be obtained by multiplication with 'K_ext').",
+        description=r"Amplitude of transient DC input (final amplitude is population-specific and will be obtained by multiplication with 'K_ext').",
         json_schema_extra={
             "unit": "pA",
             "latex": r"$I_\text{DC}$",
@@ -521,7 +521,7 @@ class Parameters(BaseModel):
 
     t_presim: float = Field(
         default=500.0,
-        description="Duration of presimulation (warmup).",
+        description=r"Duration of presimulation (warmup).",
         json_schema_extra={
             "unit": "ms",
             "latex": r"t\_presim$",
@@ -531,7 +531,7 @@ class Parameters(BaseModel):
 
     t_sim: float = Field(
         default=1000.0,
-        description="Duration of (main) simulation.",
+        description=r"Duration of (main) simulation.",
         json_schema_extra={
             "unit": "ms",
             "latex": r"t\_sim$",
@@ -541,7 +541,7 @@ class Parameters(BaseModel):
 
     sim_resolution: float = Field(
         default=0.1,
-        description="Simulation time resolution.",
+        description=r"Simulation time resolution.",
         json_schema_extra={
             "unit": "ms",
             "latex": r"sim\_resolution$",
@@ -551,7 +551,7 @@ class Parameters(BaseModel):
 
     rec_dev: list = Field(
         default=["spike_recorder"],
-        description="List of recording devices ('spike_recorder' [default] and/or 'voltmeter'). Nothing will be recorded if an empty list is given.",
+        description=r"List of recording devices ('spike_recorder' [default] and/or 'voltmeter'). Nothing will be recorded if an empty list is given.",
         json_schema_extra={
             "unit": "",
             "latex": r"rec\_dev",
@@ -562,7 +562,7 @@ class Parameters(BaseModel):
     ## TODO: make sure that the current working directory is appended when setting derived parameters; "data_path": os.path.join(os.getcwd(), "data/")
     data_path: str = Field(
         default="data/",
-        description="Path for storage of simulation data and metadata.",
+        description=r"Path for storage of simulation data and metadata.",
         json_schema_extra={
             "unit": "",
             "latex": r"data\_path",
@@ -572,7 +572,7 @@ class Parameters(BaseModel):
 
     rng_seed: int = Field(
         default=55,
-        description="Seed for NEST random number generator (used for connectivity, initial conditions, and Poissonian spike input).",
+        description=r"Seed for NEST random number generator (used for connectivity, initial conditions, and Poissonian spike input).",
         json_schema_extra={
             "unit": "",
             "latex": r"rng\_seed",
@@ -582,7 +582,7 @@ class Parameters(BaseModel):
 
     local_num_threads: int = Field(
         default=4,
-        description="Number of threads per MPI process. Note: when up-scaling the network, the model may not run correctly if there are < 4 virtual processes (i.e, a thread in an MPI process). If there are 4 or more MPI processes, this value can be set to 1.",
+        description=r"Number of threads per MPI process. Note: when up-scaling the network, the model may not run correctly if there are < 4 virtual processes (i.e, a thread in an MPI process). If there are 4 or more MPI processes, this value can be set to 1.",
         json_schema_extra={
             "unit": "",
             "latex": r"local\_num\_threads",
@@ -592,7 +592,7 @@ class Parameters(BaseModel):
 
     rec_V_int: float = Field(
         default=1.0,
-        description="Time resolution of membrane potential recordings.",
+        description=r"Time resolution of membrane potential recordings.",
         json_schema_extra={
             "unit": "ms",
             "latex": r"rec\_V\_int",
@@ -602,7 +602,7 @@ class Parameters(BaseModel):
 
     overwrite_files: bool = Field(
         default=True,
-        description="If 'True' (default), existing files will be overwritten. If 'False', a NESTError is raised if the files already exist.",
+        description=r"If 'True' (default), existing files will be overwritten. If 'False', a NESTError is raised if the files already exist.",
         json_schema_extra={
             "unit": "",
             "latex": r"overwrite\_files",
@@ -612,7 +612,7 @@ class Parameters(BaseModel):
 
     print_time: bool = Field(
         default=True,
-        description="If 'True' (default), the simulation progress is printed. This should only be used if the simulation is run on a local machine.",
+        description=r"If 'True' (default), the simulation progress is printed. This should only be used if the simulation is run on a local machine.",
         json_schema_extra={
             "unit": "",
             "latex": r"print\_time",
@@ -622,7 +622,7 @@ class Parameters(BaseModel):
 
     store_meta_data: bool = Field(
         default=True,
-        description="If 'True' (default), metadata (parameter values, node IDs, and software requirements) will be stored together with the simulation data. ",
+        description=r"If 'True' (default), metadata (parameter values, node IDs, and software requirements) will be stored together with the simulation data. ",
         json_schema_extra={
             "unit": "",
             "latex": r"store\_meta\_data",
@@ -642,11 +642,15 @@ class Parameters(BaseModel):
     ###################################
     ## derived network parameters
 
+    ## TODO: sort derived parameters below according to section
+
     @computed_field(
-        description="Number of neurons in each population.",
+        ## TODO: extract LaTeX strings of primary parameters when using them in descriptions
+        # description=r"Number of neurons in each population; $N_x=$%s%s ($\forall x\in\mathcal{P}$)." % (latex("N_scaling"), latex("full_num_neurons")), ## not working (yet)
+        description=r"Number of neurons in each cortical population $x$; $N_x=\alpha_N \tilde{N}_{x,\text{full}}$ ($\forall x\in\mathcal{P}$).",
         json_schema_extra={
             "unit": "",
-            "latex": r"$N_x=\alpha_N N_{x,\text{full}}$ ($\forall x\in\mathcal{P}$)",
+            "latex": r"$N_x$",
             "section": r"network_derived",
         },
     )
@@ -655,7 +659,7 @@ class Parameters(BaseModel):
         return (self.N_scaling * np.array(self.full_num_neurons)).astype(int)
 
     @computed_field(
-        description="Number of populations.",
+        description=r"Number of local cortical populations.",
         json_schema_extra={
             "unit": "",
             "latex": r"$N_\text{pops}$",
@@ -667,10 +671,10 @@ class Parameters(BaseModel):
         return len(self.populations)
 
     @computed_field(
-        description="Total number of connections between neuronal populations in the full-scale network, for each pair of presynaptic and postsynaptic populations.",
+        description=r"Total number of connections between cortical populations in the full-scale network, for each pair of presynaptic and postsynaptic populations $x$ and $y$.",
         json_schema_extra={
             "unit": "",
-            "latex": r"$Q_{yx}^\text{full}$ ($\forall y,x\in\mathcal{P}$)",
+            "latex": r"$\tilde{Q}_{yx}$",
             "section": r"network_derived",
         },
     )
@@ -681,10 +685,10 @@ class Parameters(BaseModel):
         )
 
     @computed_field(
-        description="Total number of synapses between neuronal populations, for each pair of presynaptic and postsynaptic populations.",
+        description=r"Total number of connections between neuronal populations, for each pair of presynaptic and postsynaptic cortical populations $x$ and $y$; $Q_{yx}=\alpha_N \alpha_K \tilde{Q}_{yx}$",
         json_schema_extra={
             "unit": "",
-            "latex": r"$Q_{yx}$ ($\forall y,x\in\mathcal{P}$)",
+            "latex": r"$Q_{yx}",
             "section": r"network_derived",
         },
     )
@@ -694,12 +698,12 @@ class Parameters(BaseModel):
             np.array(self.full_num_synapses) * self.N_scaling * self.K_scaling
         ).astype(int)
 
-    ## TODO: rename variable into `K_cc`
+    ## TODO: rename variable into `K_CC`
     @computed_field(
-        description="Number of cortico-cortical inputs per neuron (in-degree) for the different populations.",
+        description=r"Number of cortico-cortical inputs per neuron (in-degree) for each cortical populations $y$; $K_{\mathcal{C}_x}=\alpha_K \tilde{K}_{\mathcal{C}_x}$",
         json_schema_extra={
             "unit": "",
-            "latex": r"$K_{\mathcal{C}_x}$ ($\forall x\in\mathcal{P}$)",
+            "latex": r"$K_{\mathcal{C}_x}",
             "section": r"network_derived",
         },
     )
@@ -708,10 +712,10 @@ class Parameters(BaseModel):
         return np.round(np.array(self.K_ext) * self.K_scaling).astype(int)
 
     @computed_field(
-        description="Unit PSP amplitude (ratio between PSP and PSC amplitude; conversion factor for synaptic weights).",
+        description=r"Unit PSP amplitude (ratio between PSP and PSC amplitude; conversion factor for synaptic weights).",
         json_schema_extra={
             "unit": "mV/pA",
-            "latex": r"$J_\text{unit}$",
+            "latex": r"$J_\text{unit}$",  ## see eq.(11) in https://microcircuit-pd14-model.readthedocs.io/en/latest/_static/microcircuit-pd14-model.pdf
             "section": r"synapse_derived",
         },
     )
@@ -722,10 +726,10 @@ class Parameters(BaseModel):
         )
 
     @computed_field(
-        description="Matrix of mean PSC amplitudes for all pairs of presynaptic and postsynaptic populations.",
+        description=r"Matrix of mean PSC amplitudes for all pairs of presynaptic and postsynaptic cortical populations; $\bar{I}_{yx}=J_{yx}/J_\text{unit}$.",
         json_schema_extra={
             "unit": "pA",
-            "latex": r"$\bar{I}_{yx}$ ($\forall y,x\in\mathcal{P}$)",
+            "latex": r"$\bar{I}_{yx}$",
             "section": r"synapse_derived",
         },
     )
@@ -734,18 +738,16 @@ class Parameters(BaseModel):
         return self.PSP_matrix_mean / self.J_unit
 
     @computed_field(
-        description="Mean PSC amplitude of cortico-cortical inputs.",
+        description=r"Mean PSC amplitude of cortico-cortical inputs; $\bar{I}_\text{CC}=J/J_\text{unit}$.",
         json_schema_extra={
             "unit": "pA",
-            "latex": r"$\bar{I}_\mathcal{C}$",
+            "latex": r"$\bar{I}_\text{CC}$",
             "section": r"synapse_derived",
         },
     )
     @property
     def PSC_ext(self) -> float:
         return self.PSP_exc_mean / self.J_unit
-
-    # PSC_ext = self.net_dict["PSP_exc_mean"] * PSC_over_PSP
 
     # # DC input compensates for potentially missing Poisson input
     # if self.net_dict["bg_input_type"] == "poisson":
@@ -830,7 +832,7 @@ class Parameters(BaseModel):
     ## derived neuron parameters
 
     @computed_field(
-        description="Membrane resistance.",
+        description=r"Membrane resistance.",
         json_schema_extra={
             "unit": r"M$\Omega$",
             "latex": r"$R_\text{m}=\tau_\text{m}/C_\text{m}$",
@@ -845,7 +847,7 @@ class Parameters(BaseModel):
     ## derived synapse parameters
 
     @computed_field(
-        description="Matrix containing mean synaptic weights (PSP amplitudes) all pairs of presynaptic and postsynaptic populations.",
+        description=r"Matrix containing mean synaptic weights (PSP amplitudes) all pairs of presynaptic and postsynaptic populations.",
         json_schema_extra={
             "unit": "mV",
             "latex": r"$J_{yx}$ ($\forall y,x\in\mathcal{P}$)",
@@ -859,7 +861,7 @@ class Parameters(BaseModel):
         )
 
     @computed_field(
-        description="Matrix containing mean spike transmission delays all pairs of presynaptic and postsynaptic populations.",
+        description=r"Matrix containing mean spike transmission delays all pairs of presynaptic and postsynaptic populations.",
         json_schema_extra={
             "unit": "ms",
             "latex": r"$d_{yx}$ ($\forall y,x\in\mathcal{P}$)",
@@ -895,6 +897,15 @@ class Parameters(BaseModel):
 
 
 ################################################################################
+################################################################################
+
+
+# def latex(field):
+#     """
+#     Extracts the LaTeX string for a given field from the Parameters class.
+#     """
+
+#     return Parameters.model_fields[field].json_schema_extra["latex"]
 
 
 #########################################################################
